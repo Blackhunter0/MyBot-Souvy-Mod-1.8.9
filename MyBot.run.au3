@@ -697,7 +697,8 @@ Func runBot() ;Bot that runs everything in order
 						ExitLoop
 					EndIf
 					If checkAndroidReboot() = True Then ContinueLoop 2 ; must be level 2 due to loop-in-loop
-				WEnd
+					WEnd
+					ClanHop()
 				If $g_bRunState = False Then Return
 				If $g_bRestart = True Then ContinueLoop
 				If $g_iUnbrkMode >= 1 Then
@@ -723,7 +724,7 @@ Func runBot() ;Bot that runs everything in order
 			If $g_bRestart = True Then ContinueLoop
 			If IsSearchAttackEnabled() Then ; If attack scheduled has attack disabled now, stop wall upgrades, and attack.
 				$g_iNbrOfWallsUpped = 0
-				UpgradeWall()
+				If Not $g_bChkClanHop Then UpgradeWall()
 				If _Sleep($DELAYRUNBOT3) Then Return
 				If $g_bRestart = True Then ContinueLoop
 
@@ -783,6 +784,8 @@ Func Idle() ;Sequence that runs until Full Army
 
 	Local $TimeIdle = 0 ;In Seconds
 	If $g_iDebugSetlog = 1 Then SetLog("Func Idle ", $COLOR_DEBUG)
+
+	If $g_bChkClanHop Then Return
 
 	While $g_bIsFullArmywithHeroesAndSpells = False
 
@@ -918,7 +921,7 @@ Func AttackMain() ;Main control for attack functions
 	;LoadAmountOfResourcesImages() ; for debug
 	getArmyCapacity(True, True)
 	If IsSearchAttackEnabled() Then
-		If (IsSearchModeActive($DB) And checkCollectors(True, False)) Or IsSearchModeActive($LB) Or IsSearchModeActive($TS) Then
+		If (IsSearchModeActive($DB) And checkCollectors(True, False)) Or IsSearchModeActive($LB) Or IsSearchModeActive($TS)  And Not $g_bChkClanHop Then
 
 			; SwitchAcc Demen_SA_#9001
 			If $g_bChkSwitchAcc And ($g_aiAttackedCountSwitch[$g_iCurAccount] <= $g_aiAttackedCountAcc[$g_iCurAccount] - 2) Then checkSwitchAcc()
@@ -953,12 +956,16 @@ Func AttackMain() ;Main control for attack functions
 			ReturnHome($g_bTakeLootSnapShot)
 			If _Sleep($DELAYATTACKMAIN2) Then Return
 			Return True
-		Else
-			Setlog("No one of search condition match:", $COLOR_WARNING)
-			Setlog("Waiting on troops, heroes and/or spells according to search settings", $COLOR_WARNING)
-			$g_bIsSearchLimit = False
-			$g_bIsClientSyncError = False
-			$g_bQuickAttack = False
+		 Else
+			If Not $g_bChkClanHop Then
+			   Setlog("No one of search condition match:", $COLOR_WARNING)
+			   Setlog("Waiting on troops, heroes and/or spells according to search settings", $COLOR_WARNING)
+			   $g_bIsSearchLimit = False
+			   $g_bIsClientSyncError = False
+			   $g_bQuickAttack = False
+			Else
+				SetLog("Skipping Attack because Clan Hop is enabled!", $COLOR_INFO)
+			EndIf
 			; SwitchAcc Demen_SA_#9001
 			If $g_bChkSwitchAcc Then checkSwitchAcc()
 			SmartWait4Train()
@@ -1038,19 +1045,23 @@ Func _RunFunction($action)
 		Case "ReArm"
 			ReArm()
 			_Sleep($DELAYRUNBOT3)
-		Case "ReplayShare"
+		 Case "ReplayShare"
+			If $g_bChkClanHop Then Return
 			ReplayShare($g_bShareAttackEnableNow)
 			_Sleep($DELAYRUNBOT3)
-		Case "NotifyReport"
+		 Case "NotifyReport"
+			If $g_bChkClanHop Then Return
 			NotifyReport()
 			_Sleep($DELAYRUNBOT3)
-		Case "DonateCC"
+		 Case "DonateCC"
+			If $g_bChkClanHop Then Return
 			If $g_iActiveDonate And $g_bChkDonate Then
 				;If $g_bDonateSkipNearFullEnable = True and $g_bFirstStart = False Then getArmyCapacity(True, True)
 				If SkipDonateNearFullTroops(True) = False And BalanceDonRec(True) Then DonateCC()
 				If _Sleep($DELAYRUNBOT1) = False Then checkMainScreen(False)
 			EndIF
-		Case "DonateCC,Train"
+		 Case "DonateCC,Train"
+			If $g_bChkClanHop Then Return
 			If $g_iActiveDonate And $g_bChkDonate Then
 				If $g_bFirstStart Then
 					getArmyCapacity(True, False)
@@ -1081,26 +1092,34 @@ Func _RunFunction($action)
 			BoostBarracks()
 		Case "BoostSpellFactory"
 			BoostSpellFactory()
-		Case "BoostKing"
+	    Case "BoostKing"
+			If $g_bChkClanHop Then Return
 			BoostKing()
-		Case "BoostQueen"
+	    Case "BoostQueen"
+			If $g_bChkClanHop Then Return
 			BoostQueen()
-		Case "BoostWarden"
+        Case "BoostWarden"
+			If $g_bChkClanHop Then Return
 			BoostWarden()
-		Case "RequestCC"
+	    Case "RequestCC"
+			If $g_bChkClanHop Then Return
 			CheckCC() ; Demen_CC_#9004
 			RequestCC()
 			If _Sleep($DELAYRUNBOT1) = False Then checkMainScreen(False)
-		Case "Laboratory"
+	    Case "Laboratory"
+			If $g_bChkClanHop Then Return
 			Laboratory()
 			If _Sleep($DELAYRUNBOT3) = False Then checkMainScreen(False)
-		Case "UpgradeHeroes"
+	    Case "UpgradeHeroes"
+			If $g_bChkClanHop Then Return
 			UpgradeHeroes()
 			_Sleep($DELAYRUNBOT3)
 		Case "UpgradeBuilding"
+			If $g_bChkClanHop Then Return
 			UpgradeBuilding()
 			_Sleep($DELAYRUNBOT3)
 		Case "BuilderBase"
+			If $g_bChkClanHop Then Return
 			If isOnBuilderIsland() Or (($g_bChkCollectBuilderBase Or $g_bChkStartClockTowerBoost) And SwitchBetweenBases()) Then
 				CollectBuilderBase()
 				StartClockTowerBoost()
